@@ -181,9 +181,15 @@ export class NativeBridgeService {
   public async requestNativePermissions(permissions: string[]): Promise<boolean> {
     console.log(`NATIVE_BRIDGE: Requesting native permissions: ${permissions.join(', ')}`);
     if ((window as any).AndroidBridge && (window as any).AndroidBridge.requestPermissions) {
-      return (window as any).AndroidBridge.requestPermissions(permissions);
+      try {
+        return await (window as any).AndroidBridge.requestPermissions(permissions);
+      } catch (e) {
+        console.error("NATIVE_BRIDGE_ERROR: Permission request failed", e);
+        return false;
+      }
     }
-    return true;
+    // If no bridge, we return false to indicate native request is impossible
+    return false;
   }
 
   /**
@@ -224,9 +230,13 @@ export class NativeBridgeService {
    */
   public async checkNativePermission(permission: string): Promise<boolean> {
     if ((window as any).AndroidBridge && (window as any).AndroidBridge.checkPermission) {
-      return (window as any).AndroidBridge.checkPermission(permission);
+      try {
+        return await (window as any).AndroidBridge.checkPermission(permission);
+      } catch (e) {
+        return false;
+      }
     }
-    return true;
+    return false;
   }
 
   /**
@@ -261,4 +271,5 @@ export class NativeBridgeService {
       );
     });
   }
-}
+  }
+  
