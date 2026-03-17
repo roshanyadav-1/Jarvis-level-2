@@ -33,7 +33,7 @@ jobs:
       - name: Install Capacitor  
         run: npm install @capacitor/core @capacitor/cli @capacitor/android  
 
-      - name: Init Capacitor (only if missing)  
+      - name: Init Capacitor  
         run: |  
           if [ ! -f capacitor.config.json ] && [ ! -f capacitor.config.ts ]; then  
             npx cap init jarvis com.jarvis.app --web-dir=dist  
@@ -42,7 +42,7 @@ jobs:
       - name: Add Android Platform  
         run: npx cap add android || echo "Android already added"  
 
-      - name: Copy Web Assets to Android  
+      - name: Copy Web Assets  
         run: npx cap copy android  
 
       - name: Inject Android Permissions
@@ -56,27 +56,21 @@ jobs:
             sed -i '/<application/i \    <uses-feature android:name="android.hardware.microphone" android:required="false" />' $MANIFEST_PATH
           fi
 
-      - name: Fix Duplicate Classes (Gradle Fix)
+      - name: Fix Gradle Files
         run: |  
-          cat <<EOT >> android/build.gradle  
-          configurations.all {  
-              exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk7'  
-              exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk8'  
-          }  
-          EOT  
-            
-          if [ -f android/app/build.gradle ]; then  
-            echo "configurations.all { exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk7'; exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk8' }" >> android/app/build.gradle  
-          fi  
+          # Root build.gradle fix
+          echo "configurations.all { exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk7'; exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk8' }" >> android/build.gradle
+          
+          # App build.gradle fix (checking before writing)
+          if [ -f android/app/build.gradle ]; then
+            echo "configurations.all { exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk7'; exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk8' }" >> android/app/build.gradle
+          fi
 
       - name: Configure Gradle Properties  
         run: |  
-          mkdir -p android  
           echo "org.gradle.jvmargs=-Xmx2048m" > android/gradle.properties  
           echo "android.useAndroidX=true" >> android/gradle.properties  
           echo "android.enableJetifier=true" >> android/gradle.properties  
-          echo "kotlin.code.style=official" >> android/gradle.properties  
-          echo "android.nonTransitiveRClass=false" >> android/gradle.properties  
 
       - name: Build Debug APK  
         run: |  
@@ -89,5 +83,4 @@ jobs:
         with:  
           name: jarvis-apk  
           path: android/app/build/outputs/apk/debug/app-debug.apk
-          
           
