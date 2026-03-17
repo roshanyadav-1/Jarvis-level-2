@@ -45,34 +45,19 @@ jobs:
       - name: Copy Web Assets to Android  
         run: npx cap copy android  
 
-      # --- PERMISSION INJECTION STEP START ---
       - name: Inject Android Permissions
         run: |
           MANIFEST_PATH="android/app/src/main/AndroidManifest.xml"
-          
-          # Check if manifest exists
           if [ -f "$MANIFEST_PATH" ]; then
-            echo "Injecting permissions into $MANIFEST_PATH"
-            
-            # Mic, Internet aur Storage permissions add karna (application tag ke upar)
             sed -i '/<application/i \    <uses-permission android:name="android.permission.RECORD_AUDIO" />' $MANIFEST_PATH
             sed -i '/<application/i \    <uses-permission android:name="android.permission.INTERNET" />' $MANIFEST_PATH
             sed -i '/<application/i \    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />' $MANIFEST_PATH
             sed -i '/<application/i \    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />' $MANIFEST_PATH
-            
-            # Hardware feature for Mic
             sed -i '/<application/i \    <uses-feature android:name="android.hardware.microphone" android:required="false" />' $MANIFEST_PATH
-            
-            echo "Permissions injected successfully!"
-          else
-            echo "Error: AndroidManifest.xml not found at $MANIFEST_PATH"
-            exit 1
           fi
-      # --- PERMISSION INJECTION STEP END ---
 
-      - name: Ultimate Fix for Duplicate Classes  
+      - name: Fix Duplicate Classes (Gradle Fix)
         run: |  
-          # android/build.gradle configuration
           cat <<EOT >> android/build.gradle  
           configurations.all {  
               exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk7'  
@@ -80,7 +65,6 @@ jobs:
           }  
           EOT  
             
-          # App level build.gradle exclusion
           if [ -f android/app/build.gradle ]; then  
             echo "configurations.all { exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk7'; exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk8' }" >> android/app/build.gradle  
           fi  
@@ -105,4 +89,5 @@ jobs:
         with:  
           name: jarvis-apk  
           path: android/app/build/outputs/apk/debug/app-debug.apk
+          
           
