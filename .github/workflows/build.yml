@@ -2,8 +2,7 @@ name: Build APK
 
 on:
 push:
-branches:
-- main
+branches: [ "main" ]
 workflow_dispatch:
 
 jobs:
@@ -22,35 +21,26 @@ steps:
       distribution: temurin
       java-version: 17
 
-  - name: Install dependencies
-    run: npm install
+  - run: npm install
 
-  - name: Build web project
-    run: npm run build
+  - run: npm run build
 
-  - name: Install Capacitor
-    run: npm install @capacitor/core @capacitor/cli @capacitor/android
+  - run: npm install @capacitor/core @capacitor/cli @capacitor/android
 
-  - name: Init Capacitor
-    run: |
+  - run: |
       if [ ! -f capacitor.config.json ] && [ ! -f capacitor.config.ts ]; then
         npx cap init jarvis com.jarvis.app --web-dir=dist
       fi
 
-  - name: Add Android platform
-    run: npx cap add android || true
+  - run: npx cap add android || true
+  - run: npx cap copy android
 
-  - name: Copy assets
-    run: npx cap copy android
-
-  - name: Build APK
-    run: |
+  - run: |
       cd android
       chmod +x gradlew
       ./gradlew assembleDebug
 
-  - name: Upload APK
-    uses: actions/upload-artifact@v4
+  - uses: actions/upload-artifact@v4
     with:
       name: jarvis-apk
       path: android/app/build/outputs/apk/debug/app-debug.apk
