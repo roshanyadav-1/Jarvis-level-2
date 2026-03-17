@@ -77,7 +77,7 @@ export class CentralOrchestrator {
       "Autonomous Mobile Control Engine",
       "Executive Decision Engine", "Multi-Agent Task System", "Neural Memory Brain", "Automation Planning Engine", "User Behavior Learning System", "Knowledge Retrieval System", "Self-Optimization Engine", "Failsafe System",
       "Hybrid Intelligence Engine", "Cloud Intelligence Mode", "Offline Intelligence Mode", "Dynamic Mode Switcher",
-      "Wake Word Activation Engine", "Low Power Listening Mode", "Screen Off Operation", "User Behavior Analysis"
+      "Wake Word Activation Engine", "Low Power Listening Mode", "Screen Off Operation", "User Behavior Analysis", "Permission Guard"
     ];
 
     moduleNames.forEach((name, index) => {
@@ -130,7 +130,7 @@ export class CentralOrchestrator {
     if (index <= 62) return Layer.Intelligence;
     if (index <= 64) return Layer.Data;
     if (index === 65) return Layer.Intelligence;
-    if (index >= 66 && index <= 81) return Layer.Intelligence;
+    if (index >= 66 && index <= 82) return Layer.Intelligence;
     return Layer.Update;
   }
 
@@ -450,72 +450,4 @@ export class CentralOrchestrator {
         if (systemCmd.action === 'OPEN_APP' && systemCmd.target) {
           this.state.memory.lastApp = systemCmd.target;
         }
-      }
-      return;
-    }
-
-    // App Automation Layer
-    const automationAction = this.automation?.parseAutomationCommand(commandToProcess);
-    if (automationAction) {
-      this.logEvent(`Neural Engine: Identified App [${automationAction.appName.toUpperCase()}]`);
-      this.state.memory.lastApp = automationAction.appName;
-      const result = await this.automation?.executeAutomation(automationAction);
-      if (result) {
-        this.logEvent(result.message);
-        
-        // Simulate in-app execution
-        if (automationAction.action === 'MESSAGE') {
-          this.logEvent(`Automation: Routing message to ${automationAction.target}...`);
-        }
-      }
-      return;
-    }
-
-    // Neural Task Routing Logic
-    // This logic analyzes the command and routes it to the most relevant module
-    const modules = Array.from(this.modules.values());
-    let targetModule = null;
-
-    if (cmd.includes('security') || cmd.includes('lock') || cmd.includes('auth')) {
-      targetModule = modules.find(m => m.layer === Layer.Security);
-    } else if (cmd.includes('memory') || cmd.includes('remember') || cmd.includes('history')) {
-      targetModule = modules.find(m => m.layer === Layer.Memory);
-    } else if (cmd.includes('plan') || cmd.includes('schedule') || cmd.includes('organize')) {
-      targetModule = modules.find(m => m.layer === Layer.Planning);
-    } else if (cmd.includes('search') || cmd.includes('find') || cmd.includes('lookup')) {
-      targetModule = modules.find(m => m.name.includes('Search') || m.name.includes('Extraction'));
-    } else if (cmd.includes('ui') || cmd.includes('screen') || cmd.includes('interface')) {
-      targetModule = modules.find(m => m.layer === Layer.Automation);
-    }
-
-    if (targetModule) {
-      this.logEvent(`Neural Router: Routing task to ${targetModule.name}...`);
-      const result = await targetModule.execute({ command: text });
-      this.logEvent(result.message);
-      return;
-    }
-
-    if (cmd.includes('control') || cmd.includes('app') || cmd.includes('mobile') || cmd.includes('chalana') || cmd.includes('kholna')) {
-      this.logEvent("Analyzing System Access Protocols...");
-      setTimeout(() => {
-        this.logEvent("JARVIS: Mobile security sandboxing prevents direct app manipulation. I am currently restricted to this secure browser environment.");
-      }, 1000);
-    }
-
-    // Simulate module interaction
-    if (cmd.includes("security")) {
-      this.logEvent("Module 33: Permission Manager verifying request...");
-    }
-    if (cmd.includes("search")) {
-      this.logEvent("Module 32: Smart Search Engine initiated...");
-    }
-  }
-
-  public getState(): JarvisState {
-    return this.state;
-  }
-
-  public getModules() {
-    return Array.from(this.modules.values());
-  }
-}
+     
