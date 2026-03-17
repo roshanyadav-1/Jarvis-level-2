@@ -11,16 +11,13 @@ build:
 runs-on: ubuntu-latest
 
 steps:
-  - name: Checkout repository
-    uses: actions/checkout@v4
+  - uses: actions/checkout@v4
 
-  - name: Setup Node
-    uses: actions/setup-node@v4
+  - uses: actions/setup-node@v4
     with:
       node-version: 20
 
-  - name: Setup Java
-    uses: actions/setup-java@v4
+  - uses: actions/setup-java@v4
     with:
       distribution: temurin
       java-version: 17
@@ -28,7 +25,7 @@ steps:
   - name: Install dependencies
     run: npm install
 
-  - name: Build web app
+  - name: Build web project
     run: npm run build
 
   - name: Install Capacitor
@@ -40,17 +37,17 @@ steps:
         npx cap init jarvis com.jarvis.app --web-dir=dist
       fi
 
-  - name: Add Android
-    run: npx cap add android || echo "Android already exists"
+  - name: Add Android platform
+    run: npx cap add android || true
 
-  - name: Copy Web Assets
+  - name: Copy assets
     run: npx cap copy android
 
   - name: Build APK
     run: |
       cd android
       chmod +x gradlew
-      ./gradlew assembleDebug --no-daemon
+      ./gradlew assembleDebug
 
   - name: Upload APK
     uses: actions/upload-artifact@v4
