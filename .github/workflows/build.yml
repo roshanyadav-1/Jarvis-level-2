@@ -1,46 +1,108 @@
 name: Build APK
 
 on:
-push:
-branches: [ "main" ]
-workflow_dispatch:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
-build:
-runs-on: ubuntu-latest
+  build:
+    runs-on: ubuntu-latest
 
-steps:
-  - uses: actions/checkout@v4
+    steps:  
+      - name: Checkout  
+        uses: actions/checkout@v4  
 
-  - uses: actions/setup-node@v4
-    with:
-      node-version: 20
+      - name: Setup Node  
+        uses: actions/setup-node@v4  
+        with:  
+          node-version: 20  
 
-  - uses: actions/setup-java@v4
-    with:
-      distribution: temurin
-      java-version: 17
+      - name: Setup Java 21  
+        uses: actions/setup-java@v4  
+        with:  
+          distribution: 'temurin'  
+          java-version: '21'  
 
-  - run: npm install
+      - name: Install dependencies  
+        run: npm install  
 
-  - run: npm run build
+      - name: Build Web Project  
+        run: npm run build  
 
-  - run: npm install @capacitor/core @capacitor/cli @capacitor/android
+      - name: Install Capacitor  
+        run: npm install @capacitor/core @capacitor/cli @capacitor/android  
 
-  - run: |
-      if [ ! -f capacitor.config.json ] && [ ! -f capacitor.config.ts ]; then
-        npx cap init jarvis com.jarvis.app --web-dir=dist
-      fi
+      - name: Init Capacitor (only if missing)  
+        run: |  
+          if [ ! -f capacitor.config.json ] && [ ! -f capacitor.config.ts ]; then  
+            npx cap init jarvis com.jarvis.app --web-dir=dist  
+          fi  
 
-  - run: npx cap add android || true
-  - run: npx cap copy android
+      - name: Add Android Platform  
+        run: npx cap add android || echo "Android already added"  
 
-  - run: |
-      cd android
-      chmod +x gradlew
-      ./gradlew assembleDebug
+      - name: Copy Web Assets to Android  
+        run: npx cap copy android  
 
-  - uses: actions/upload-artifact@v4
-    with:
-      name: jarvis-apk
-      path: android/app/build/outputs/apk/debug/app-debug.apk
+      # --- PERMISSION INJECTION STEP START ---
+      - name: Inject Android Permissions
+        run: |
+          MANIFEST_PATH="android/app/src/main/AndroidManifest.xml"
+          
+          # Check if manifest exists
+          if [ -f "$MANIFEST_PATH" ]; then
+            echo "Injecting permissions into $MANIFEST_PATH"
+            
+            # Mic, Internet aur Storage permissions add karna (application tag ke upar)
+            sed -i '/<application/i \    <uses-permission android:name="android.permission.RECORD_AUDIO" />' $MANIFEST_PATH
+            sed -i '/<application/i \    <uses-permission android:name="android.permission.INTERNET" />' $MANIFEST_PATH
+            sed -i '/<application/i \    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />' $MANIFEST_PATH
+            sed -i '/<application/i \    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />' $MANIFEST_PATH
+            
+            # Hardware feature for Mic
+            sed -i '/<application/i \    <uses-feature android:name="android.hardware.microphone" android:required="false" />' $MANIFEST_PATH
+            
+            echo "Permissions injected successfully!"
+          else
+            echo "Error: AndroidManifest.xml not found at $MANIFEST_PATH"
+            exit 1
+          fi
+      # --- PERMISSION INJECTION STEP END ---
+
+      - name: Ultimate Fix for Duplicate Classes  
+        run: |  
+          # android/build.gradle configuration
+          cat <<EOT >> android/build.gradle  
+          configurations.all {  
+              exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk7'  
+              exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk8'  
+          }  
+          EOT  
+            
+          # App level build.gradle exclusion
+          if [ -f android/app/build.gradle ]; then  
+            echo "configurations.all { exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk7'; exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk8' }" >> android/app/build.gradle  
+          fi  
+
+      - name: Configure Gradle Properties  
+        run: |  
+          mkdir -p android  
+          echo "org.gradle.jvmargs=-Xmx2048m" > android/gradle.properties  
+          echo "android.useAndroidX=true" >> android/gradle.properties  
+          echo "android.enableJetifier=true" >> android/gradle.properties  
+          echo "kotlin.code.style=official" >> android/gradle.properties  
+          echo "android.nonTransitiveRClass=false" >> android/gradle.properties  
+
+      - name: Build Debug APK  
+        run: |  
+          cd android  
+          chmod +x gradlew  
+          ./gradlew assembleDebug --no-daemon  
+
+      - name: Upload APK Artifact  
+        uses: actions/upload-artifact@v4  
+        with:  
+          name: jarvis-apk  
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          
