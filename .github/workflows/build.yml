@@ -13,64 +13,69 @@ jobs:
       - name: Checkout  
         uses: actions/checkout@v4  
 
-      - name: Setup Node  
+      - name: Setup Node & Java
         uses: actions/setup-node@v4  
-        with:  
+        with:
           node-version: 20  
-
-      - name: Setup Java 21  
-        uses: actions/setup-java@v4  
+      - uses: actions/setup-java@v4  
         with:  
           distribution: 'temurin'  
           java-version: '21'  
 
-      - name: Install dependencies  
-        run: npm install  
+      - name: Install All Dependencies
+        run: |
+          npm install
+          npm install @capacitor/core @capacitor/cli @capacitor/android @capacitor-community/voice-recorder
 
       - name: Build Web Project  
         run: npm run build  
 
-      - name: Install Capacitor  
-        run: npm install @capacitor/core @capacitor/cli @capacitor/android  
-
-      - name: Init Capacitor  
-        run: |  
+      - name: Init & Add Android
+        run: |
           if [ ! -f capacitor.config.json ] && [ ! -f capacitor.config.ts ]; then  
             npx cap init jarvis com.jarvis.app --web-dir=dist  
-          fi  
+          fi
+          npx cap add android || echo "Already exists"
+          npx cap sync android
 
-      - name: Add Android Platform  
-        run: npx cap add android || echo "Android already added"  
-
-      - name: Copy Web Assets  
-        run: npx cap copy android  
-
-      - name: Inject Android Permissions
+      - name: 🛡️ Inject All Android Permissions
         run: |
-          MANIFEST_PATH="android/app/src/main/AndroidManifest.xml"
-          if [ -f "$MANIFEST_PATH" ]; then
-            sed -i '/<application/i \    <uses-permission android:name="android.permission.RECORD_AUDIO" />' $MANIFEST_PATH
-            sed -i '/<application/i \    <uses-permission android:name="android.permission.INTERNET" />' $MANIFEST_PATH
-            sed -i '/<application/i \    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />' $MANIFEST_PATH
-            sed -i '/<application/i \    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />' $MANIFEST_PATH
-            sed -i '/<application/i \    <uses-feature android:name="android.hardware.microphone" android:required="false" />' $MANIFEST_PATH
+          MANIFEST="android/app/src/main/AndroidManifest.xml"
+          if [ -f "$MANIFEST" ]; then
+            # 1. Microphone & Audio
+            sed -i '/<application/i \    <uses-permission android:name="android.permission.RECORD_AUDIO" />' $MANIFEST
+            sed -i '/<application/i \    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />' $MANIFEST
+            
+            # 2. Storage (Read/Write)
+            sed -i '/<application/i \    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />' $MANIFEST
+            sed -i '/<application/i \    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />' $MANIFEST
+            
+            # 3. Location (Jarvis ko weather/map ke liye chahiye hogi)
+            sed -i '/<application/i \    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />' $MANIFEST
+            sed -i '/<application/i \    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />' $MANIFEST
+            
+            # 4. Camera (Face recognition ya vision ke liye)
+            sed -i '/<application/i \    <uses-permission android:name="android.permission.CAMERA" />' $MANIFEST
+            
+            # 5. Internet & Network State
+            sed -i '/<application/i \    <uses-permission android:name="android.permission.INTERNET" />' $MANIFEST
+            sed -i '/<application/i \    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />' $MANIFEST
+            
+            # 6. Notifications
+            sed -i '/<application/i \    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />' $MANIFEST
+
+            # Hardware Features (Jarvis ko pata hona chahiye mic/camera hai)
+            sed -i '/<application/i \    <uses-feature android:name="android.hardware.microphone" android:required="false" />' $MANIFEST
+            sed -i '/<application/i \    <uses-feature android:name="android.hardware.camera" android:required="false" />' $MANIFEST
+            
+            echo "All essential permissions injected!"
           fi
 
-      - name: Fix Gradle Files
+      - name: Fix Gradle Build Issues
         run: |  
-          # Root build.gradle fix
           echo "configurations.all { exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk7'; exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk8' }" >> android/build.gradle
-          
-          # App build.gradle fix (checking before writing)
-          if [ -f android/app/build.gradle ]; then
-            echo "configurations.all { exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk7'; exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk8' }" >> android/app/build.gradle
-          fi
-
-      - name: Configure Gradle Properties  
-        run: |  
-          echo "org.gradle.jvmargs=-Xmx2048m" > android/gradle.properties  
-          echo "android.useAndroidX=true" >> android/gradle.properties  
-          echo "android.enableJetifier=true" >> android/gradle.properties  
+          echo "android.useAndroidX=true" >> android/gradle.properties
+          echo "android.enableJetifier=true" >> android/gradle.properties
 
       - name: Build Debug APK  
         run: |  
