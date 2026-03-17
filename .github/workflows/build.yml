@@ -2,7 +2,8 @@ name: Build APK
 
 on:
 push:
-branches: [ main ]
+branches:
+- main
 workflow_dispatch:
 
 jobs:
@@ -10,7 +11,7 @@ build:
 runs-on: ubuntu-latest
 
 steps:
-  - name: Checkout
+  - name: Checkout repository
     uses: actions/checkout@v4
 
   - name: Setup Node
@@ -18,82 +19,40 @@ steps:
     with:
       node-version: 20
 
-  # Java 17 Android builds ke liye safer hai
   - name: Setup Java
     uses: actions/setup-java@v4
     with:
-      distribution: 'temurin'
-      java-version: '17'
+      distribution: temurin
+      java-version: 17
 
   - name: Install dependencies
     run: npm install
 
-  - name: Build Web Project
+  - name: Build web app
     run: npm run build
 
   - name: Install Capacitor
     run: npm install @capacitor/core @capacitor/cli @capacitor/android
 
-  - name: Init Capacitor (only if missing)
+  - name: Init Capacitor
     run: |
       if [ ! -f capacitor.config.json ] && [ ! -f capacitor.config.ts ]; then
         npx cap init jarvis com.jarvis.app --web-dir=dist
       fi
 
-  - name: Add Android Platform
-    run: npx cap add android || echo "Android already added"
-
-  # 🔴 IMPORTANT: AndroidManifest create + permissions add
-  - name: Create Android Manifest with Permissions
-    run: |
-      mkdir -p android/app/src/main
-      cat <<EOF > android/app/src/main/AndroidManifest.xml
-      <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-          package="com.jarvis.app">
-
-          <uses-permission android:name="android.permission.INTERNET"/>
-          <uses-permission android:name="android.permission.RECORD_AUDIO"/>
-          <uses-permission android:name="android.permission.CAMERA"/>
-          <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
-          <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
-
-          <application
-              android:label="Jarvis"
-              android:theme="@android:style/Theme.DeviceDefault.NoActionBar">
-
-              <activity
-                  android:name="com.getcapacitor.BridgeActivity"
-                  android:exported="true">
-
-                  <intent-filter>
-                      <action android:name="android.intent.action.MAIN"/>
-                      <category android:name="android.intent.category.LAUNCHER"/>
-                  </intent-filter>
-
-              </activity>
-
-          </application>
-
-      </manifest>
-      EOF
+  - name: Add Android
+    run: npx cap add android || echo "Android already exists"
 
   - name: Copy Web Assets
     run: npx cap copy android
 
-  - name: Configure Gradle Properties
-    run: |
-      mkdir -p android
-      echo "org.gradle.jvmargs=-Xmx2048m" > android/gradle.properties
-      echo "android.useAndroidX=true" >> android/gradle.properties
-      echo "android.enableJetifier=true" >> android/gradle.properties
-
-  - name: Build Debug APK
+  - name: Build APK
     run: |
       cd android
       chmod +x gradlew
       ./gradlew assembleDebug --no-daemon
 
-  - name: Upload APK Artifact
+  - name: Upload APK
     uses: actions/upload-artifact@v4
     with:
       name: jarvis-apk
