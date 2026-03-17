@@ -118,16 +118,36 @@ export const PermissionManager: React.FC = () => {
                         <p className="text-[10px] text-white/40 leading-tight">{p.description}</p>
                       </div>
                     </div>
-                    {p.status === 'granted' ? (
-                      <CheckCircle className="w-5 h-5 text-emerald-500" />
-                    ) : (
-                      <button
-                        onClick={() => requestPermission(p)}
-                        className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider bg-indigo-500 text-white rounded-md hover:bg-indigo-600 transition-colors"
-                      >
-                        Grant
-                      </button>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {p.status === 'granted' && (
+                        <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+                          <CheckCircle className="w-3 h-3 text-emerald-500" />
+                          <span className="text-[8px] font-bold text-emerald-500 uppercase">Granted</span>
+                        </div>
+                      )}
+                      {p.status === 'denied' && (
+                        <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-red-500/10 border border-red-500/20">
+                            <XCircle className="w-3 h-3 text-red-500" />
+                            <span className="text-[8px] font-bold text-red-500 uppercase">Denied</span>
+                          </div>
+                          <button
+                            onClick={() => requestPermission(p)}
+                            className="px-3 py-1 text-[9px] font-bold uppercase tracking-wider bg-red-500/20 text-red-400 border border-red-500/50 rounded-md hover:bg-red-500/30 transition-all"
+                          >
+                            Retry
+                          </button>
+                        </div>
+                      )}
+                      {p.status === 'pending' && (
+                        <button
+                          onClick={() => requestPermission(p)}
+                          className="px-4 py-1.5 text-[9px] font-bold uppercase tracking-wider bg-indigo-500 text-white rounded-md hover:bg-indigo-600 shadow-[0_0_15px_rgba(99,102,241,0.4)] transition-all active:scale-95"
+                        >
+                          Grant Access
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
@@ -137,7 +157,10 @@ export const PermissionManager: React.FC = () => {
               <div className="p-4 bg-amber-500/10 border-t border-amber-500/20">
                 <p className="text-[10px] text-amber-200/70 leading-relaxed">
                   <AlertTriangle className="w-3 h-3 inline mr-1 mb-0.5" />
-                  Some permissions are missing. JARVIS might not be able to execute all automation commands in APK mode.
+                  {!(window as any).AndroidBridge ? 
+                    "NATIVE_BRIDGE_MISSING: This APK was built without native integration. Permissions cannot be managed automatically." :
+                    "Some permissions are missing. JARVIS might not be able to execute all automation commands in APK mode."
+                  }
                 </p>
               </div>
             )}
